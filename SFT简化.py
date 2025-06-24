@@ -18,17 +18,22 @@ def process_data(qA_dict, s_dict, role):
     assert len(sqA_idAtten_ST["input_ids"]) == len(A_id_ST)
     return {"input_ids": sqA_idAtten_ST["input_ids"], "attention_mask": sqA_idAtten_ST["attention_mask"], "labels": A_id_ST}
 
-def test(model, tokenizer, s_dict, qA_dict_list, role="helpful"):
+
+def tes(model, tokenizer, s_dict, qA_dict_list, role="helpful"):
     messages = [
         {"role": "system", "content": s_dict[role]},
         {"role": "user", "content": qA_dict_list[0]["q"]},
         {"role": "assistant", "content": qA_dict_list[0][f'A_{role}']}
     ]
     sq_ST = tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
-    sq_idAtten_ST = tokenizer(sq_ST, return_tensors="pt", padding=True, padding_side='left', add_special_tokens=False).to(model.device)
-    sqa_id_list_ST = model.generate(sq_idAtten_ST.input_ids, attention_mask=sq_idAtten_ST.attention_mask, max_new_tokens=100, do_sample=True, temperature=0.7, top_p=0.9, pad_token_id=tokenizer.pad_token_id)
+    sq_idAtten_ST = tokenizer(sq_ST, return_tensors="pt", padding=True, padding_side='left',
+                              add_special_tokens=False).to(model.device)
+    sqa_id_list_ST = model.generate(sq_idAtten_ST.input_ids, attention_mask=sq_idAtten_ST.attention_mask,
+                                    max_new_tokens=100, do_sample=True, temperature=0.7, top_p=0.9,
+                                    pad_token_id=tokenizer.pad_token_id)
     sqa_ST = tokenizer.decode(sqa_id_list_ST[0], skip_special_tokens=False)
     print(f"\n=== Generated Answer ===\n{sqa_ST}\n")
+
 
 if __name__ == "__main__":
     model_name = "Qwen/Qwen2.5-0.5B-Instruct"
@@ -48,20 +53,5 @@ if __name__ == "__main__":
 - Final numeric result must be enclosed in \\boxed{}."""
     }
 
-    dataset = Dataset.from_dict({
-        "q": [item["q"] for item in qA_dict_list],
-        "A_helpful": [item["A_helpful"] for item in qA_dict_list]
-    }).map(lambda x: process_data(x, s_dict, "helpful"))
-    dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
-
-    dataloader = DataLoader(dataset, batch_size=1)
-
-    # 模拟训练步骤（这里只跑一次）
-    for batch in dataloader:
-        inputs = {k: v.to(model.device) for k, v in batch.items()}
-        with torch.no_grad():
-            outputs = model(**inputs)
-            print("Loss:", outputs.loss.item())
-
-    # 执行生成测试
-    test(model, tokenizer, s_dict, qA_dict_list)
+    # 直接调用test函数，传入所需参数
+    tes(model, tokenizer, s_dict, qA_dict_list)
